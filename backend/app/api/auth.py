@@ -47,10 +47,10 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # 生成token
+    # 生成token (sub必须是字符串，python-jose要求)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": new_user.id},
+        data={"sub": str(new_user.id)},
         expires_delta=access_token_expires
     )
 
@@ -79,10 +79,10 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
             detail="账户已被禁用"
         )
 
-    # 生成token
+    # 生成token (sub必须是字符串，python-jose要求)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.id},
+        data={"sub": str(user.id)},
         expires_delta=access_token_expires
     )
 

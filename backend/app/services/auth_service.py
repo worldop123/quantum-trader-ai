@@ -51,11 +51,12 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        # sub声明必须是字符串(python-jose要求)，解码后转为int
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
             raise credentials_exception
-        token_data = TokenData(user_id=user_id)
-    except JWTError:
+        token_data = TokenData(user_id=int(user_id_str))
+    except (JWTError, ValueError, TypeError):
         raise credentials_exception
 
     user = db.query(User).filter(User.id == token_data.user_id).first()

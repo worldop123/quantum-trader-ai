@@ -42,6 +42,15 @@ class StrategyResponse(BaseModel):
         from_attributes = True
 
 
+class StrategyListResponse(BaseModel):
+    """策略列表分页响应"""
+    items: List[StrategyResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class BacktestRequest(BaseModel):
     strategy_type: str
     symbol: str

@@ -62,7 +62,7 @@ const emit = defineEmits<{
 
 const drawerStyle = computed(() => {
   const style: Record<string, string> = {
-    zIndex: props.zIndex + 1,
+    zIndex: String(props.zIndex + 1),
   }
 
   if (props.position === 'left' || props.position === 'right') {

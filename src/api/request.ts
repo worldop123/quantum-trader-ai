@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-// 创建axios实例
+// 创建axios实例 - 使用相对路径，通过vite代理转发到后端
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

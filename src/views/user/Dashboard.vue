@@ -46,35 +46,11 @@
     <!-- Chart Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 quantum-card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-200">资产走势</h3>
-          <div class="flex gap-2">
-            <button v-for="period in periods" :key="period.value" 
-              @click="selectedPeriod = period.value"
-              class="px-3 py-1 text-xs rounded transition-colors"
-              :class="selectedPeriod === period.value ? 'bg-quantum-cyan text-quantum-darker' : 'bg-quantum-border text-gray-400 hover:bg-gray-700'">
-              {{ period.label }}
-            </button>
-          </div>
-        </div>
-        <div class="h-64 flex items-center justify-center bg-quantum-darker rounded-lg">
-          <div class="text-center">
-            <LineChart class="w-12 h-12 text-gray-600 mx-auto mb-2" />
-            <p class="text-gray-500 text-sm">图表组件开发中</p>
-            <p class="text-gray-600 text-xs">ECharts 折线图</p>
-          </div>
-        </div>
+        <FundChart />
       </div>
 
       <div class="quantum-card">
-        <h3 class="text-lg font-semibold text-gray-200 mb-4">资产分布</h3>
-        <div class="h-64 flex items-center justify-center bg-quantum-darker rounded-lg">
-          <div class="text-center">
-            <PieChart class="w-12 h-12 text-gray-600 mx-auto mb-2" />
-            <p class="text-gray-500 text-sm">图表组件开发中</p>
-            <p class="text-gray-600 text-xs">ECharts 饼图</p>
-          </div>
-        </div>
+        <AssetPieChart />
       </div>
     </div>
 
@@ -149,25 +125,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useTradingStore } from '../../stores/trading'
+import FundChart from '../../components/charts/FundChart.vue'
+import AssetPieChart from '../../components/charts/AssetPieChart.vue'
 import {
   Wallet,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Brain,
-  LineChart,
-  PieChart
+  Brain
 } from 'lucide-vue-next'
 
 const tradingStore = useTradingStore()
-
-const selectedPeriod = ref('1d')
-const periods = [
-  { label: '1D', value: '1d' },
-  { label: '1W', value: '1w' },
-  { label: '1M', value: '1m' },
-  { label: 'ALL', value: 'all' }
-]
 
 const statusLabels: Record<string, string> = {
   filled: '已成交',

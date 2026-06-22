@@ -8,6 +8,7 @@ from app.schemas import (
     StrategyCreate,
     StrategyUpdate,
     StrategyResponse,
+    StrategyListResponse,
     BacktestRequest,
     BacktestResult,
     AIAnalysisRequest,
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/strategy", tags=["策略"])
 
 # ========== 策略管理 ==========
 
-@router.get("", response_model=List[StrategyResponse])
+@router.get("", response_model=StrategyListResponse)
 async def get_strategies(
     page: int = 1,
     page_size: int = 20,
@@ -266,7 +267,7 @@ async def get_strategy_types():
         {
             "type": "ma_cross",
             "name": "均线交叉策略",
-            "description": "基于快慢均线交叉的趋势跟踪策略",
+            "description": "基于快慢均线交叉的趋势跟踪策略。金叉买入、死叉卖出",
             "params": {
                 "fast_period": {"type": "int", "default": 5, "min": 2, "max": 50, "label": "快线周期"},
                 "slow_period": {"type": "int", "default": 20, "min": 10, "max": 200, "label": "慢线周期"},
@@ -275,11 +276,50 @@ async def get_strategy_types():
         {
             "type": "grid",
             "name": "网格交易策略",
-            description: "在价格区间内自动低买高卖的震荡策略",
+            "description": "在价格区间内自动低买高卖的震荡策略",
             "params": {
                 "grid_count": {"type": "int", "default": 10, "min": 3, "max": 100, "label": "网格数量"},
                 "grid_spacing": {"type": "float", "default": 0.01, "min": 0.001, "max": 0.1, "label": "网格间距(%)"},
                 "base_price": {"type": "float", "default": 0, "min": 0, "label": "基准价格"},
+            }
+        },
+        {
+            "type": "rsi",
+            "name": "RSI超买超卖策略",
+            "description": "RSI从超卖区回升买入，从超买区回落卖出",
+            "params": {
+                "rsi_period": {"type": "int", "default": 14, "min": 2, "max": 50, "label": "RSI周期"},
+                "oversold": {"type": "float", "default": 30, "min": 10, "max": 40, "label": "超卖阈值"},
+                "overbought": {"type": "float", "default": 70, "min": 60, "max": 90, "label": "超买阈值"},
+            }
+        },
+        {
+            "type": "macd",
+            "name": "MACD策略",
+            "description": "基于MACD金叉买入、死叉卖出的趋势策略",
+            "params": {
+                "fast_period": {"type": "int", "default": 12, "min": 5, "max": 30, "label": "快线周期"},
+                "slow_period": {"type": "int", "default": 26, "min": 15, "max": 50, "label": "慢线周期"},
+                "signal_period": {"type": "int", "default": 9, "min": 3, "max": 20, "label": "信号线周期"},
+            }
+        },
+        {
+            "type": "boll",
+            "name": "布林带策略",
+            "description": "触及下轨买入，触及上轨卖出的均值回归策略",
+            "params": {
+                "period": {"type": "int", "default": 20, "min": 5, "max": 50, "label": "周期"},
+                "std_dev": {"type": "float", "default": 2.0, "min": 1.0, "max": 3.0, "label": "标准差倍数"},
+            }
+        },
+        {
+            "type": "dca",
+            "name": "定投策略",
+            "description": "定时定额买入策略，支持小时/天/周周期",
+            "params": {
+                "amount": {"type": "float", "default": 100, "min": 10, "label": "每次定投金额(USDT)"},
+                "interval_hours": {"type": "int", "default": 24, "min": 1, "max": 720, "label": "定投间隔(小时)"},
+                "max_orders": {"type": "int", "default": 0, "min": 0, "label": "最大定投次数(0=无限)"},
             }
         },
         {

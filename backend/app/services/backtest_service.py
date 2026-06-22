@@ -43,6 +43,14 @@ class BacktestService:
             result = self._grid_backtest(df, params, initial_capital)
         elif strategy_type == "martingale":
             result = self._martingale_backtest(df, params, initial_capital)
+        elif strategy_type == "rsi":
+            result = self._rsi_backtest(df, params, initial_capital)
+        elif strategy_type == "macd":
+            result = self._macd_backtest(df, params, initial_capital)
+        elif strategy_type == "boll":
+            result = self._boll_backtest(df, params, initial_capital)
+        elif strategy_type == "dca":
+            result = self._dca_backtest(df, params, initial_capital)
         else:
             return {
                 "success": False,
@@ -436,6 +444,386 @@ class BacktestService:
             "trades": trades,
             "warning": "马丁格尔策略风险极高，实际使用可能导致爆仓，仅供学习研究"
         }
+
+    def _calc_stats(
+        self,
+        equity_curve: List[Dict[str, Any]],
+        trades: List[Dict[str, Any]],
+        initial_capital: float,
+        last_price: float,
+        position: float,
+        capital: float
+    ) -> Dict[str, Any]:
+        """计算回测统计指标（通用辅助方法）"""
+        final_equity = capital + position * last_price
+        total_return = final_equity - initial_capital
+        total_return_percent = (final_equity - initial_capital) / initial_capital * 100
+
+        # 最大回撤
+        equity_values = [e["equity"] for e in equity_curve]
+        peak = np.maximum.accumulate(equity_values)
+        drawdown = (peak - equity_values) / peak * 100
+        max_drawdown = np.max(drawdown) if len(drawdown) > 0 else 0
+
+        # 胜率
+        sell_trades = [t for t in trades if t["side"] == "sell"]
+        winning_trades = [t for t in sell_trades if t.get("pnl", 0) > 0]
+        losing_trades = [t for t in sell_trades if t.get("pnl", 0) <= 0]
+        win_rate = len(winning_trades) / len(sell_trades) * 100 if len(sell_trades) > 0 else 0
+
+        # 盈亏比
+        total_profit = sum(t.get("pnl", 0) for t in winning_trades)
+        total_loss = abs(sum(t.get("pnl", 0) for t in losing_trades))
+        profit_factor = total_profit / total_loss if total_loss > 0 else float("inf")
+
+        # 夏普比率
+        returns = np.diff(equity_values) / equity_values[:-1] if len(equity_values) > 1 else [0]
+        sharpe_ratio = np.mean(returns) / np.std(returns) * np.sqrt(252) if len(returns) > 1 and np.std(returns) > 0 else 0
+
+        return {
+            "success": True,
+            "total_return": total_return,
+            "total_return_percent": total_return_percent,
+            "max_drawdown": max_drawdown,
+            "max_drawdown_percent": max_drawdown,
+            "win_rate": win_rate,
+            "total_trades": len(sell_trades),
+            "winning_trades": len(winning_trades),
+            "losing_trades": len(losing_trades),
+            "profit_factor": profit_factor,
+            "sharpe_ratio": sharpe_ratio,
+            "equity_curve": equity_curve,
+            "trades": trades
+        }
+
+    def _rsi_backtest(
+        self,
+        df: pd.DataFrame,
+        params: Dict[str, Any],
+        initial_capital: float
+    ) -> Dict[str, Any]:
+        """RSI超买超卖策略回测"""
+        rsi_period = params.get("rsi_period", 14)
+        oversold = params.get("oversold", 30)
+        overbought = params.get("overbought", 70)
+
+        # 计算RSI（Wilder's RSI）
+        delta = df["close"].diff()
+        gain = delta.where(delta > 0, 0.0)
+        loss = (-delta).where(delta < 0, 0.0)
+        avg_gain = gain.ewm(alpha=1/rsi_period, min_periods=rsi_period).mean()
+        avg_loss = loss.ewm(alpha=1/rsi_period, min_periods=rsi_period).mean()
+        rs = avg_gain / avg_loss
+        df["rsi"] = 100 - (100 / (1 + rs))
+
+        capital = initial_capital
+        position = 0.0
+        entry_price = 0.0
+        trades = []
+        equity_curve = []
+
+        for i, row in df.iterrows():
+            if pd.isna(row["rsi"]):
+                equity_curve.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "equity": capital,
+                    "price": row["close"]
+                })
+                continue
+
+            # RSI从超卖区回升，买入
+            if row["rsi"] <= oversold and position == 0:
+                position = capital / row["close"]
+                entry_price = row["close"]
+                capital = 0
+                trades.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "side": "buy",
+                    "price": row["close"],
+                    "quantity": position,
+                    "amount": position * row["close"]
+                })
+
+            # RSI从超买区回落，卖出
+            elif row["rsi"] >= overbought and position > 0:
+                capital = position * row["close"]
+                pnl = (row["close"] - entry_price) * position
+                trades.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "side": "sell",
+                    "price": row["close"],
+                    "quantity": position,
+                    "amount": capital,
+                    "pnl": pnl,
+                    "pnl_percent": (row["close"] - entry_price) / entry_price * 100
+                })
+                position = 0
+
+            equity = capital + position * row["close"]
+            equity_curve.append({
+                "timestamp": int(row["timestamp"].timestamp() * 1000),
+                "equity": equity,
+                "price": row["close"]
+            })
+
+        # 最后平仓
+        if position > 0:
+            last_price = df.iloc[-1]["close"]
+            capital = position * last_price
+            pnl = (last_price - entry_price) * position
+            trades.append({
+                "timestamp": int(df.iloc[-1]["timestamp"].timestamp() * 1000),
+                "side": "sell",
+                "price": last_price,
+                "quantity": position,
+                "amount": capital,
+                "pnl": pnl,
+                "pnl_percent": (last_price - entry_price) / entry_price * 100
+            })
+            position = 0
+
+        return self._calc_stats(equity_curve, trades, initial_capital, df.iloc[-1]["close"], position, capital)
+
+    def _macd_backtest(
+        self,
+        df: pd.DataFrame,
+        params: Dict[str, Any],
+        initial_capital: float
+    ) -> Dict[str, Any]:
+        """MACD策略回测"""
+        fast_period = params.get("fast_period", 12)
+        slow_period = params.get("slow_period", 26)
+        signal_period = params.get("signal_period", 9)
+
+        # 计算MACD
+        ema_fast = df["close"].ewm(span=fast_period, adjust=False).mean()
+        ema_slow = df["close"].ewm(span=slow_period, adjust=False).mean()
+        df["macd"] = ema_fast - ema_slow
+        df["signal"] = df["macd"].ewm(span=signal_period, adjust=False).mean()
+
+        capital = initial_capital
+        position = 0.0
+        entry_price = 0.0
+        trades = []
+        equity_curve = []
+
+        for i, row in df.iterrows():
+            if pd.isna(row["macd"]) or pd.isna(row["signal"]):
+                equity_curve.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "equity": capital,
+                    "price": row["close"]
+                })
+                continue
+
+            # 金叉买入
+            if row["macd"] > row["signal"] and position == 0:
+                position = capital / row["close"]
+                entry_price = row["close"]
+                capital = 0
+                trades.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "side": "buy",
+                    "price": row["close"],
+                    "quantity": position,
+                    "amount": position * row["close"]
+                })
+
+            # 死叉卖出
+            elif row["macd"] < row["signal"] and position > 0:
+                capital = position * row["close"]
+                pnl = (row["close"] - entry_price) * position
+                trades.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "side": "sell",
+                    "price": row["close"],
+                    "quantity": position,
+                    "amount": capital,
+                    "pnl": pnl,
+                    "pnl_percent": (row["close"] - entry_price) / entry_price * 100
+                })
+                position = 0
+
+            equity = capital + position * row["close"]
+            equity_curve.append({
+                "timestamp": int(row["timestamp"].timestamp() * 1000),
+                "equity": equity,
+                "price": row["close"]
+            })
+
+        # 最后平仓
+        if position > 0:
+            last_price = df.iloc[-1]["close"]
+            capital = position * last_price
+            pnl = (last_price - entry_price) * position
+            trades.append({
+                "timestamp": int(df.iloc[-1]["timestamp"].timestamp() * 1000),
+                "side": "sell",
+                "price": last_price,
+                "quantity": position,
+                "amount": capital,
+                "pnl": pnl,
+                "pnl_percent": (last_price - entry_price) / entry_price * 100
+            })
+            position = 0
+
+        return self._calc_stats(equity_curve, trades, initial_capital, df.iloc[-1]["close"], position, capital)
+
+    def _boll_backtest(
+        self,
+        df: pd.DataFrame,
+        params: Dict[str, Any],
+        initial_capital: float
+    ) -> Dict[str, Any]:
+        """布林带策略回测"""
+        period = params.get("period", 20)
+        std_dev = params.get("std_dev", 2.0)
+
+        df["boll_mid"] = df["close"].rolling(window=period).mean()
+        df["boll_std"] = df["close"].rolling(window=period).std()
+        df["boll_upper"] = df["boll_mid"] + std_dev * df["boll_std"]
+        df["boll_lower"] = df["boll_mid"] - std_dev * df["boll_std"]
+
+        capital = initial_capital
+        position = 0.0
+        entry_price = 0.0
+        trades = []
+        equity_curve = []
+
+        for i, row in df.iterrows():
+            if pd.isna(row["boll_lower"]) or pd.isna(row["boll_upper"]):
+                equity_curve.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "equity": capital,
+                    "price": row["close"]
+                })
+                continue
+
+            # 触及下轨买入
+            if row["close"] <= row["boll_lower"] and position == 0:
+                position = capital / row["close"]
+                entry_price = row["close"]
+                capital = 0
+                trades.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "side": "buy",
+                    "price": row["close"],
+                    "quantity": position,
+                    "amount": position * row["close"]
+                })
+
+            # 触及上轨卖出
+            elif row["close"] >= row["boll_upper"] and position > 0:
+                capital = position * row["close"]
+                pnl = (row["close"] - entry_price) * position
+                trades.append({
+                    "timestamp": int(row["timestamp"].timestamp() * 1000),
+                    "side": "sell",
+                    "price": row["close"],
+                    "quantity": position,
+                    "amount": capital,
+                    "pnl": pnl,
+                    "pnl_percent": (row["close"] - entry_price) / entry_price * 100
+                })
+                position = 0
+
+            equity = capital + position * row["close"]
+            equity_curve.append({
+                "timestamp": int(row["timestamp"].timestamp() * 1000),
+                "equity": equity,
+                "price": row["close"]
+            })
+
+        # 最后平仓
+        if position > 0:
+            last_price = df.iloc[-1]["close"]
+            capital = position * last_price
+            pnl = (last_price - entry_price) * position
+            trades.append({
+                "timestamp": int(df.iloc[-1]["timestamp"].timestamp() * 1000),
+                "side": "sell",
+                "price": last_price,
+                "quantity": position,
+                "amount": capital,
+                "pnl": pnl,
+                "pnl_percent": (last_price - entry_price) / entry_price * 100
+            })
+            position = 0
+
+        return self._calc_stats(equity_curve, trades, initial_capital, df.iloc[-1]["close"], position, capital)
+
+    def _dca_backtest(
+        self,
+        df: pd.DataFrame,
+        params: Dict[str, Any],
+        initial_capital: float
+    ) -> Dict[str, Any]:
+        """定投策略回测"""
+        amount = params.get("amount", 100)
+        interval_hours = params.get("interval_hours", 24)
+        max_orders = params.get("max_orders", 0)  # 0=无限
+
+        capital = initial_capital
+        position = 0.0
+        total_cost = 0.0
+        trades = []
+        equity_curve = []
+        buy_count = 0
+        last_buy_ts = None
+
+        interval_ms = interval_hours * 3600 * 1000
+
+        for i, row in df.iterrows():
+            ts = int(row["timestamp"].timestamp() * 1000)
+
+            # 定投买入
+            should_buy = False
+            if last_buy_ts is None:
+                should_buy = True
+            elif ts - last_buy_ts >= interval_ms:
+                should_buy = True
+
+            if should_buy and (max_orders == 0 or buy_count < max_orders) and capital >= amount:
+                quantity = amount / row["close"]
+                position += quantity
+                total_cost += amount
+                capital -= amount
+                buy_count += 1
+                last_buy_ts = ts
+                trades.append({
+                    "timestamp": ts,
+                    "side": "buy",
+                    "price": row["close"],
+                    "quantity": quantity,
+                    "amount": amount,
+                    "buy_count": buy_count
+                })
+
+            equity = capital + position * row["close"]
+            equity_curve.append({
+                "timestamp": ts,
+                "equity": equity,
+                "price": row["close"]
+            })
+
+        # 最后卖出统计
+        last_price = df.iloc[-1]["close"]
+        if position > 0:
+            sell_amount = position * last_price
+            pnl = sell_amount - total_cost
+            trades.append({
+                "timestamp": int(df.iloc[-1]["timestamp"].timestamp() * 1000),
+                "side": "sell",
+                "price": last_price,
+                "quantity": position,
+                "amount": sell_amount,
+                "pnl": pnl,
+                "pnl_percent": (sell_amount - total_cost) / total_cost * 100 if total_cost > 0 else 0
+            })
+            capital += sell_amount
+            position = 0
+
+        return self._calc_stats(equity_curve, trades, initial_capital, last_price, position, capital)
 
 
 # 创建默认实例

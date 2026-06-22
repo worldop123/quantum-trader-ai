@@ -82,17 +82,24 @@ class OKXService:
 
         headers = self._get_headers(method, request_path, body_str)
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            if method.upper() == "GET":
-                response = await client.get(url, headers=headers, params=params)
-            elif method.upper() == "POST":
-                response = await client.post(url, headers=headers, json=body)
-            elif method.upper() == "DELETE":
-                response = await client.delete(url, headers=headers, params=params)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                if method.upper() == "GET":
+                    response = await client.get(url, headers=headers, params=params)
+                elif method.upper() == "POST":
+                    response = await client.post(url, headers=headers, json=body)
+                elif method.upper() == "DELETE":
+                    response = await client.delete(url, headers=headers, params=params)
+                else:
+                    raise ValueError(f"Unsupported method: {method}")
 
-            return response.json()
+                return response.json()
+        except httpx.ConnectError:
+            return {"code": "50001", "msg": "无法连接到OKX服务器，请检查网络连接", "data": []}
+        except httpx.TimeoutException:
+            return {"code": "50002", "msg": "请求OKX服务器超时", "data": []}
+        except Exception as e:
+            return {"code": "50000", "msg": f"请求OKX API异常: {str(e)}", "data": []}
 
     # ========== 账户相关 ==========
 

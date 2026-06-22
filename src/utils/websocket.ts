@@ -29,6 +29,7 @@ class WebSocketService {
   // 状态
   public status = ref<WebSocketStatus>('disconnected')
   public connectionCount = ref(0)
+  public reconnectCount = ref(0)
 
   // 消息处理器 {type: [handlers]}
   private handlers: Map<string, Set<MessageHandler>> = new Map()
@@ -36,7 +37,9 @@ class WebSocketService {
   private channelSubscriptions: Map<string, Set<(data: any) => void>> = new Map()
 
   constructor() {
-    this.url = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
+    // 使用相对路径，通过vite代理转发到后端
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    this.url = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/ws`
   }
 
   /**
@@ -63,6 +66,7 @@ class WebSocketService {
           console.log('✅ WebSocket connected')
           this.status.value = 'connected'
           this.reconnectAttempts = 0
+          this.reconnectCount.value = 0
           this.startHeartbeat()
           this.resubscribeAll()
           resolve(true)
@@ -125,6 +129,7 @@ class WebSocketService {
     }
 
     this.reconnectAttempts++
+    this.reconnectCount.value = this.reconnectAttempts
     this.status.value = 'reconnecting'
 
     // 指数退避算法
@@ -313,6 +318,7 @@ export const wsService = new WebSocketService()
  */
 export function useWebSocket() {
   const status = wsService.status
+  const reconnectCount = wsService.reconnectCount
 
   onUnmounted(() => {
     // 组件卸载时不自动断开，因为是全局连接
@@ -320,6 +326,7 @@ export function useWebSocket() {
 
   return {
     status,
+    reconnectCount,
     connect: (token?: string) => wsService.connect(token),
     disconnect: () => wsService.disconnect(),
     subscribe: (channel: string, callback: (data: any) => void) => wsService.subscribe(channel, callback),

@@ -100,13 +100,12 @@ const rememberMe = ref(false)
 const loading = ref(false)
 const error = ref('')
 
-function handleLogin() {
+async function handleLogin() {
   loading.value = true
   error.value = ''
 
-  // 模拟网络延迟
-  setTimeout(() => {
-    const success = userStore.login(email.value, password.value)
+  try {
+    const success = await userStore.login(email.value, password.value)
     
     if (success) {
       if (userStore.isAdmin) {
@@ -117,9 +116,11 @@ function handleLogin() {
     } else {
       error.value = '邮箱或密码错误，请重试'
     }
-    
+  } catch (err) {
+    error.value = '登录失败，请检查网络连接'
+  } finally {
     loading.value = false
-  }, 800)
+  }
 }
 
 function fillUserAccount() {
