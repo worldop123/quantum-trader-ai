@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@theme {
+  --color-quantum-dark: #0a0e17;
+  --color-quantum-darker: #060912;
+  --color-quantum-card: #111827;
+  --color-quantum-border: #1f2937;
+  --color-quantum-cyan: #00f5ff;
+  --color-quantum-purple: #a855f7;
+  --color-quantum-green: #10b981;
+  --color-quantum-red: #ef4444;
+  --color-quantum-yellow: #f59e0b;
+  --color-quantum-blue: #3b82f6;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --shadow-neon-cyan: 0 0 20px rgba(0, 245, 255, 0.3);
+  --shadow-neon-purple: 0 0 20px rgba(168, 85, 247, 0.3);
+  --shadow-neon-green: 0 0 20px rgba(16, 185, 129, 0.3);
+  --shadow-neon-red: 0 0 20px rgba(239, 68, 68, 0.3);
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  0% { box-shadow: 0 0 5px rgba(0, 245, 255, 0.5); }
+  100% { box-shadow: 0 0 20px rgba(0, 245, 255, 0.8); }
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-quantum-dark);
+  color: rgb(209 213 219);
+  font-family: var(--font-mono);
+}
+
+* {
+  border-color: var(--color-quantum-border);
+}
+
+/* Component styles */
+.quantum-card {
+  background-color: var(--color-quantum-card);
+  border: 1px solid var(--color-quantum-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.quantum-btn {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.quantum-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-quantum-cyan);
+}
+
+.quantum-btn-primary {
+  background-color: var(--color-quantum-cyan);
+  color: var(--color-quantum-darker);
+}
+
+.quantum-btn-primary:hover {
+  background-color: rgb(103 232 249);
+}
+
+.quantum-btn-secondary {
+  background-color: var(--color-quantum-border);
+  color: rgb(209 213 219);
+}
+
+.quantum-btn-secondary:hover {
+  background-color: rgb(55 65 81);
+}
+
+.quantum-btn-success {
+  background-color: var(--color-quantum-green);
+  color: white;
+}
+
+.quantum-btn-success:hover {
+  background-color: rgb(52 211 153);
+}
+
+.quantum-btn-danger {
+  background-color: var(--color-quantum-red);
+  color: white;
+}
+
+.quantum-btn-danger:hover {
+  background-color: rgb(248 113 113);
+}
+
+.quantum-input {
+  width: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  background-color: var(--color-quantum-darker);
+  border: 1px solid var(--color-quantum-border);
+  border-radius: 0.375rem;
+  color: rgb(229 231 235);
+  outline: none;
+}
+
+.quantum-input::placeholder {
+  color: rgb(107 114 128);
+}
+
+.quantum-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-quantum-cyan);
+  border-color: transparent;
+}
+
+.quantum-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(156 163 175);
+  margin-bottom: 0.25rem;
+}
+
+.neon-text-cyan {
+  color: var(--color-quantum-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+}
+
+.neon-text-green {
+  color: var(--color-quantum-green);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.neon-text-red {
+  color: var(--color-quantum-red);
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  color: rgb(156 163 175);
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.sidebar-link:hover {
+  color: var(--color-quantum-cyan);
+  background-color: rgba(31, 41, 55, 0.3);
+}
+
+.sidebar-link.active {
+  color: var(--color-quantum-cyan);
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
