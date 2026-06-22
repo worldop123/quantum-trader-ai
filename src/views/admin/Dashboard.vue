@@ -43,23 +43,15 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="quantum-card">
         <h3 class="text-lg font-semibold text-gray-200 mb-4">用户增长趋势</h3>
-        <div class="h-64 flex items-center justify-center bg-quantum-darker rounded-lg">
-          <div class="text-center">
-            <LineChart class="w-12 h-12 text-gray-600 mx-auto mb-2" />
-            <p class="text-gray-500 text-sm">图表开发中</p>
-            <p class="text-gray-600 text-xs">ECharts 折线图</p>
-          </div>
+        <div class="h-64">
+          <FundChart :data="userGrowthData" :height="240" />
         </div>
       </div>
 
       <div class="quantum-card">
         <h3 class="text-lg font-semibold text-gray-200 mb-4">交易量分布</h3>
-        <div class="h-64 flex items-center justify-center bg-quantum-darker rounded-lg">
-          <div class="text-center">
-            <BarChart3 class="w-12 h-12 text-gray-600 mx-auto mb-2" />
-            <p class="text-gray-500 text-sm">图表开发中</p>
-            <p class="text-gray-600 text-xs">ECharts 柱状图</p>
-          </div>
+        <div class="h-64">
+          <AssetPieChart :data="tradeVolumeData" :height="240" />
         </div>
       </div>
     </div>
@@ -113,18 +105,53 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import FundChart from '../../components/charts/FundChart.vue'
+import AssetPieChart from '../../components/charts/AssetPieChart.vue'
 import {
   Users,
   TrendingUp,
   Brain,
   Activity,
-  LineChart,
-  BarChart3,
   User,
   AlertTriangle,
   XCircle,
   Info
 } from 'lucide-vue-next'
+
+// 用户增长趋势数据(累计用户数)
+interface FundPoint { time: number; value: number }
+const userGrowthData = ref<FundPoint[]>([])
+
+// 交易量分布数据(按交易对)
+interface AssetItem { name: string; value: number }
+const tradeVolumeData = ref<AssetItem[]>([])
+
+function generateUserGrowthData(): FundPoint[] {
+  const result: FundPoint[] = []
+  const now = Date.now()
+  let users = 8000
+  for (let i = 30; i >= 0; i--) {
+    const time = now - i * 24 * 60 * 60 * 1000
+    users += Math.floor(Math.random() * 200 + 50)
+    result.push({ time, value: users })
+  }
+  // 最后一个点对齐展示的总用户数
+  result[result.length - 1].value = 12847
+  return result
+}
+
+onMounted(() => {
+  userGrowthData.value = generateUserGrowthData()
+  tradeVolumeData.value = [
+    { name: 'BTC/USDT', value: 980000000 },
+    { name: 'ETH/USDT', value: 620000000 },
+    { name: 'SOL/USDT', value: 320000000 },
+    { name: 'BNB/USDT', value: 240000000 },
+    { name: 'XRP/USDT', value: 180000000 },
+    { name: '其他', value: 60000000 }
+  ]
+})
 
 const recentUsers = [
   { id: 1, username: 'user_001', email: 'user001@example.com', time: '2分钟前' },

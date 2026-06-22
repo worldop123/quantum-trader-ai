@@ -80,10 +80,16 @@
             注册成功！正在跳转到登录页面...
           </div>
 
-          <button type="submit" class="w-full quantum-btn-primary" :disabled="loading || success">
-            <span v-if="loading">注册中...</span>
-            <span v-else>注册</span>
-          </button>
+          <LoadingButton
+            type="primary"
+            size="large"
+            :block="true"
+            :loading="loading"
+            :disabled="success"
+            :loading-text="'注册中...'"
+          >
+            注册
+          </LoadingButton>
         </form>
 
         <div class="mt-6 text-center">
@@ -105,6 +111,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import LoadingButton from '../components/common/LoadingButton.vue'
 import { Zap } from 'lucide-vue-next'
 
 const router = useRouter()

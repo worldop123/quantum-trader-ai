@@ -186,3 +186,21 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #374151;
 }
+
+/* 页面切换淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 防止横向滚动条 */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}

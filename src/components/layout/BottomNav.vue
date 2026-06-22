@@ -4,7 +4,7 @@
       <div
         v-for="item in navItems"
         :key="item.path"
-        :class="['nav-item', { active: currentPath === item.path }]"
+        :class="['nav-item', { active: isItemActive(item) }]"
         @click="handleNavClick(item)"
       >
         <div class="nav-icon">
@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { computed, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 interface NavItem {
@@ -28,6 +28,7 @@ interface NavItem {
   label: string
   icon: any
   badge?: number | string
+  matchPrefix?: boolean
 }
 
 const route = useRoute()
@@ -66,7 +67,7 @@ const UserIcon = () => h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'c
 
 const navItems: NavItem[] = [
   {
-    path: '/',
+    path: '/dashboard',
     label: '首页',
     icon: HomeIcon,
   },
@@ -76,21 +77,28 @@ const navItems: NavItem[] = [
     icon: TradeIcon,
   },
   {
-    path: '/strategy',
+    path: '/ai-strategy',
     label: '策略',
     icon: StrategyIcon,
   },
   {
-    path: '/market',
-    label: '行情',
+    path: '/assets',
+    label: '资产',
     icon: MarketIcon,
   },
   {
-    path: '/user',
-    label: '我的',
+    path: '/settings',
+    label: '设置',
     icon: UserIcon,
   },
 ]
+
+function isItemActive(item: NavItem): boolean {
+  if (item.matchPrefix) {
+    return currentPath.value.startsWith(item.path)
+  }
+  return currentPath.value === item.path
+}
 
 function handleNavClick(item: NavItem) {
   if (currentPath.value !== item.path) {
@@ -131,6 +139,7 @@ function handleNavClick(item: NavItem) {
   position: relative;
   transition: all 0.2s ease;
   color: #8892a6;
+  min-height: 44px;
 }
 
 .nav-item:active {

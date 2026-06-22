@@ -128,12 +128,11 @@ async def load_model(
     current_user: User = Depends(get_current_user),
 ):
     """加载模型"""
-    # TODO: 实际实现时需要检查权限
-    success = await local_model_service.load_model(model_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Model not found")
+    result = await local_model_service.load_model(model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Model load failed"))
 
-    return {"success": True, "message": "Model loaded"}
+    return {"success": True, "message": result.get("message", "Model loaded")}
 
 
 @router.post("/models/unload")

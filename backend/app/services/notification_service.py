@@ -111,11 +111,18 @@ class NotificationService:
     async def send_risk_alert(
         self,
         alert_type: str,
+        level: str,
         message: str,
-        level: str = "warning",
         custom_token: Optional[str] = None
     ) -> Dict[str, Any]:
-        """发送风险预警"""
+        """发送风险预警
+
+        Args:
+            alert_type: 预警类型
+            level: 风险等级 info/warning/danger/success
+            message: 预警内容
+            custom_token: 用户自定义token（优先使用）
+        """
         level_emoji = {
             "info": "ℹ️",
             "warning": "⚠️",

@@ -14,3 +14,7 @@ cryptography==42.0.5
 numpy==1.26.4
 pandas==2.2.1
 email-validator==2.1.1
+# 本地大模型推理（可选依赖，未安装时本地模型服务会自动降级）
+# 安装方式: pip install llama-cpp-python
+# 如需GPU加速: CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
+llama-cpp-python

@@ -1,9 +1,9 @@
 <template>
   <div class="h-full flex flex-col gap-4">
     <!-- Trading Pair Header -->
-    <div class="quantum-card flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <select v-model="selectedSymbol" class="quantum-input w-48">
+    <div class="quantum-card flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-3 md:gap-4">
+        <select v-model="selectedSymbol" class="quantum-input w-full md:w-48">
           <option value="BTC/USDT">BTC/USDT</option>
           <option value="ETH/USDT">ETH/USDT</option>
           <option value="SOL/USDT">SOL/USDT</option>
@@ -11,20 +11,29 @@
           <option value="XRP/USDT">XRP/USDT</option>
         </select>
         <div>
-          <p class="text-2xl font-bold font-mono text-quantum-green">${{ currentPrice.toLocaleString() }}</p>
+          <NumberTicker
+            :value="currentPrice"
+            :decimals="2"
+            prefix="$"
+            :flash-on-change="true"
+            :up-color="'#10b981'"
+            :down-color="'#ef4444'"
+            :neutral-color="'#10b981'"
+            class="text-xl md:text-2xl font-bold font-mono text-quantum-green"
+          />
           <p class="text-sm text-quantum-green">+2.35% ↑</p>
         </div>
       </div>
-      <div class="flex gap-4 text-sm">
-        <div class="text-center">
+      <div class="flex gap-3 md:gap-4 text-sm overflow-x-auto">
+        <div class="text-center flex-shrink-0">
           <p class="text-gray-500">24h 最高</p>
           <p class="font-mono text-gray-300">$68,500</p>
         </div>
-        <div class="text-center">
+        <div class="text-center flex-shrink-0">
           <p class="text-gray-500">24h 最低</p>
           <p class="font-mono text-gray-300">$65,200</p>
         </div>
-        <div class="text-center">
+        <div class="text-center flex-shrink-0">
           <p class="text-gray-500">24h 成交量</p>
           <p class="font-mono text-gray-300">$2.4B</p>
         </div>
@@ -36,15 +45,15 @@
       <!-- Chart -->
       <div class="lg:col-span-3 quantum-card flex flex-col">
         <div class="flex items-center justify-between mb-4">
-          <div class="flex gap-2">
+          <div class="flex gap-2 overflow-x-auto">
             <button v-for="tf in timeframes" :key="tf.value"
               @click="selectedTimeframe = tf.value"
-              class="px-3 py-1 text-xs rounded transition-colors"
+              class="px-3 py-1 text-xs rounded transition-colors flex-shrink-0"
               :class="selectedTimeframe === tf.value ? 'bg-quantum-cyan text-quantum-darker' : 'bg-quantum-border text-gray-400 hover:bg-gray-700'">
               {{ tf.label }}
             </button>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 flex-shrink-0">
             <button class="p-2 rounded bg-quantum-border hover:bg-gray-700 transition-colors">
               <CandlestickChart class="w-4 h-4 text-gray-400" />
             </button>
@@ -56,12 +65,8 @@
             </button>
           </div>
         </div>
-        <div class="flex-1 flex items-center justify-center bg-quantum-darker rounded-lg">
-          <div class="text-center">
-            <CandlestickChart class="w-16 h-16 text-gray-600 mx-auto mb-3" />
-            <p class="text-gray-500">K线图表开发中</p>
-            <p class="text-gray-600 text-sm">TradingView / ECharts K线图</p>
-          </div>
+        <div class="flex-1 bg-quantum-darker rounded-lg min-h-[300px]">
+          <KLineChart :symbol="wsSymbol" :data="klineData" />
         </div>
       </div>
 
@@ -89,12 +94,12 @@
         <!-- Buy/Sell Tabs -->
         <div class="flex gap-2 mb-4">
           <button @click="side = 'buy'"
-            class="flex-1 py-2 rounded font-medium transition-colors"
+            class="flex-1 py-2 rounded font-medium transition-colors min-h-[44px]"
             :class="side === 'buy' ? 'bg-quantum-green text-white' : 'bg-quantum-border text-gray-400 hover:bg-gray-700'">
             买入
           </button>
           <button @click="side = 'sell'"
-            class="flex-1 py-2 rounded font-medium transition-colors"
+            class="flex-1 py-2 rounded font-medium transition-colors min-h-[44px]"
             :class="side === 'sell' ? 'bg-quantum-red text-white' : 'bg-quantum-border text-gray-400 hover:bg-gray-700'">
             卖出
           </button>
@@ -105,12 +110,12 @@
           <!-- Market/Limit -->
           <div class="flex gap-2">
             <button @click="orderMode = 'market'"
-              class="flex-1 py-1 text-xs rounded transition-colors"
+              class="flex-1 py-1 text-xs rounded transition-colors min-h-[44px]"
               :class="orderMode === 'market' ? 'bg-quantum-cyan/20 text-quantum-cyan' : 'text-gray-500 hover:text-gray-300'">
               市价
             </button>
             <button @click="orderMode = 'limit'"
-              class="flex-1 py-1 text-xs rounded transition-colors"
+              class="flex-1 py-1 text-xs rounded transition-colors min-h-[44px]"
               :class="orderMode === 'limit' ? 'bg-quantum-cyan/20 text-quantum-cyan' : 'text-gray-500 hover:text-gray-300'">
               限价
             </button>
@@ -132,7 +137,7 @@
           <div class="flex gap-2">
             <button v-for="pct in [25, 50, 75, 100]" :key="pct"
               @click="setQuantityPercent(pct)"
-              class="flex-1 py-1 text-xs rounded bg-quantum-border text-gray-400 hover:bg-gray-700 hover:text-gray-300 transition-colors">
+              class="flex-1 py-1 text-xs rounded bg-quantum-border text-gray-400 hover:bg-gray-700 hover:text-gray-300 transition-colors min-h-[44px]">
               {{ pct }}%
             </button>
           </div>
@@ -148,10 +153,10 @@
           <!-- Leverage (futures only) -->
           <div v-if="orderType === 'futures'">
             <label class="quantum-label">杠杆倍数</label>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
               <button v-for="lev in leverageOptions" :key="lev"
                 @click="leverage = lev"
-                class="flex-1 py-1 text-xs rounded transition-colors"
+                class="flex-1 py-1 text-xs rounded transition-colors min-h-[44px] min-w-[44px]"
                 :class="leverage === lev ? 'bg-quantum-yellow/20 text-quantum-yellow' : 'bg-quantum-border text-gray-400 hover:bg-gray-700'">
                 {{ lev }}x
               </button>
@@ -159,11 +164,16 @@
           </div>
 
           <!-- Submit Button -->
-          <button @click="submitOrder" 
-            class="w-full py-3 rounded font-bold transition-all"
-            :class="side === 'buy' ? 'bg-quantum-green hover:bg-green-400 text-white' : 'bg-quantum-red hover:bg-red-400 text-white'">
+          <LoadingButton
+            :loading="submitting"
+            :type="side === 'buy' ? 'success' : 'danger'"
+            :block="true"
+            size="large"
+            :loading-text="'提交中...'"
+            @click="submitOrder"
+          >
             {{ side === 'buy' ? '买入' : '卖出' }} {{ selectedSymbol.split('/')[0] }}
-          </button>
+          </LoadingButton>
         </div>
 
         <!-- Available Balance -->
@@ -193,7 +203,15 @@
           </div>
           <!-- Current Price -->
           <div class="py-2 text-center text-lg font-bold text-quantum-green border-y border-quantum-border my-1">
-            ${{ currentPrice.toLocaleString() }}
+            <NumberTicker
+              :value="currentPrice"
+              :decimals="2"
+              prefix="$"
+              :flash-on-change="true"
+              :up-color="'#10b981'"
+              :down-color="'#ef4444'"
+              :neutral-color="'#10b981'"
+            />
           </div>
           <!-- Bids -->
           <div v-for="i in 5" :key="'bid-' + i" class="grid grid-cols-3 py-1 relative">
@@ -229,6 +247,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useTradingStore } from '../../stores/trading'
+import NumberTicker from '../../components/common/NumberTicker.vue'
+import LoadingButton from '../../components/common/LoadingButton.vue'
+import KLineChart from '../../components/charts/KLineChart.vue'
 import {
   CandlestickChart,
   LineChart,
@@ -242,10 +263,16 @@ const currentPrice = ref(67500)
 const selectedTimeframe = ref('1h')
 const orderType = ref<'spot' | 'futures' | 'option'>('spot')
 const side = ref<'buy' | 'sell'>('buy')
-const orderMode = ref<'market' | 'limit'>('limit')
+const orderMode = ref<'market' | 'limit'>('market')
 const price = ref(67500)
 const quantity = ref(0)
 const leverage = ref(5)
+const submitting = ref(false)
+
+// WebSocket 频道格式符号 (BTC/USDT -> BTC-USDT)
+const wsSymbol = computed(() => selectedSymbol.value.replace('/', '-'))
+// K线数据 (KLineChart组件内部会生成模拟数据作为初始展示)
+const klineData = ref<any[]>([])
 
 const timeframes = [
   { label: '1m', value: '1m' },
@@ -269,22 +296,29 @@ function setQuantityPercent(pct: number) {
   quantity.value = parseFloat((available / p).toFixed(6))
 }
 
-function submitOrder() {
+async function submitOrder() {
   if (!quantity.value || quantity.value <= 0) {
     alert('请输入有效的数量')
     return
   }
-  
-  const p = orderMode.value === 'market' ? currentPrice.value : price.value
-  tradingStore.placeOrder(
-    selectedSymbol.value,
-    side.value,
-    orderMode.value,
-    quantity.value,
-    p
-  )
-  
-  alert(`${side.value === 'buy' ? '买入' : '卖出'}订单已提交`)
-  quantity.value = 0
+
+  submitting.value = true
+  try {
+    const p = orderMode.value === 'market' ? currentPrice.value : price.value
+    await tradingStore.placeOrder(
+      selectedSymbol.value,
+      side.value,
+      orderMode.value,
+      quantity.value,
+      p
+    )
+    alert(`${side.value === 'buy' ? '买入' : '卖出'}订单已提交`)
+    quantity.value = 0
+  } catch (err) {
+    alert('订单提交失败，请重试')
+    console.error('submitOrder failed:', err)
+  } finally {
+    submitting.value = false
+  }
 }
 </script>

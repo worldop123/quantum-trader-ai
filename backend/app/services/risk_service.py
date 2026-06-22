@@ -103,6 +103,10 @@ class RiskService:
         if status.circuit_breaker_level >= 2 and side == "buy":
             return False, "二级熔断已触发，只允许平仓"
 
+        # 二级熔断标记：暂停开新仓
+        if status.trading_paused_for_new and side == "buy":
+            return False, "二级熔断标记已开启，禁止开新仓（只允许平仓）"
+
         # ========== 单交易级风控 ==========
 
         # 强制止损检查
@@ -136,6 +140,58 @@ class RiskService:
 
             if single_loss > settings.max_single_loss:
                 return False, f"风控规则：单笔亏损超限（预估{single_loss:.2f} USDT，最大{settings.max_single_loss} USDT）"
+
+        # ========== 持仓级风控 ==========
+
+        # 仅对开仓（买入）方向进行持仓检查
+        if side == "buy":
+            from sqlalchemy import func as sql_func
+
+            # 计算当前品种净持仓数量（买入成交 - 卖出成交）
+            buy_qty = db.query(sql_func.coalesce(sql_func.sum(TradeOrder.filled_quantity), 0)).filter(
+                TradeOrder.user_id == user_id,
+                TradeOrder.symbol == symbol,
+                TradeOrder.side == "buy",
+                TradeOrder.status.in_(["filled", "partially_filled"]),
+            ).scalar() or 0
+
+            sell_qty = db.query(sql_func.coalesce(sql_func.sum(TradeOrder.filled_quantity), 0)).filter(
+                TradeOrder.user_id == user_id,
+                TradeOrder.symbol == symbol,
+                TradeOrder.side == "sell",
+                TradeOrder.status.in_(["filled", "partially_filled"]),
+            ).scalar() or 0
+
+            net_position_qty = float(buy_qty) - float(sell_qty)
+
+            # 单品种持仓数量检查
+            if net_position_qty + quantity > settings.max_position_per_symbol:
+                return False, (
+                    f"风控规则：单品种持仓数量超限"
+                    f"（当前{net_position_qty:.4f}，本次{quantity}，"
+                    f"合计{net_position_qty + quantity:.4f}，最大{settings.max_position_per_symbol}）"
+                )
+
+            # 单品种持仓金额检查
+            order_price = price or 0
+            current_position_value = net_position_qty * order_price
+            new_position_value = current_position_value + quantity * order_price
+            if new_position_value > settings.max_position_value_per_symbol:
+                return False, (
+                    f"风控规则：单品种持仓金额超限"
+                    f"（当前{current_position_value:.2f} USDT，本次{quantity * order_price:.2f} USDT，"
+                    f"最大{settings.max_position_value_per_symbol} USDT）"
+                )
+
+            # 总仓位比例检查
+            if status.total_equity and status.total_equity > 0:
+                total_ratio = (status.total_position_value + quantity * order_price) / status.total_equity
+                if total_ratio > settings.max_total_position_ratio:
+                    return False, (
+                        f"风控规则：总仓位比例超限"
+                        f"（当前{status.total_position_value / status.total_equity * 100:.2f}%，"
+                        f"本次后{total_ratio * 100:.2f}%，最大{settings.max_total_position_ratio * 100:.2f}%）"
+                    )
 
         # ========== 系统级风控 ==========
 
@@ -190,9 +246,13 @@ class RiskService:
         if new_level != old_level:
             status.circuit_breaker_level = new_level
 
+            # 根据熔断等级确定通知级别
+            alert_level = "danger" if new_level >= 3 else ("warning" if new_level >= 1 else "info")
+
             # 三级熔断：全部平仓，暂停交易
             if new_level == 3:
                 status.trading_paused = True
+                status.trading_paused_for_new = True
                 status.pause_reason = "三级熔断：单日亏损超过15%"
                 self._add_risk_log(
                     db, user_id,
@@ -202,9 +262,11 @@ class RiskService:
                     action="全部平仓，暂停交易",
                     symbol="*",
                 )
+                print(f"🚨 三级熔断触发（用户{user_id}）：今日亏损{loss_ratio*100:.2f}%，全部平仓并暂停交易")
 
             # 二级熔断：暂停开新仓
             elif new_level == 2:
+                status.trading_paused_for_new = True
                 self._add_risk_log(
                     db, user_id,
                     risk_type="circuit_breaker",
@@ -213,21 +275,25 @@ class RiskService:
                     action="暂停开新仓，只允许平仓",
                     symbol="*",
                 )
+                print(f"⚠️  二级熔断触发（用户{user_id}）：今日亏损{loss_ratio*100:.2f}%，暂停开新仓（trading_paused_for_new=True）")
 
-            # 一级熔断：仓位减半
+            # 一级熔断：仓位减半，设置风控标记
             elif new_level == 1:
+                # 一级熔断标记：circuit_breaker_level=1 即为风控状态标记
                 self._add_risk_log(
                     db, user_id,
                     risk_type="circuit_breaker",
                     level="warning",
                     reason=f"一级熔断触发：今日亏损{loss_ratio*100:.2f}%",
-                    action="仓位自动降低50%",
+                    action="仓位自动降低50%，风控状态标记已设置",
                     symbol="*",
                 )
+                print(f"⚠️  一级熔断触发（用户{user_id}）：今日亏损{loss_ratio*100:.2f}%，风控状态标记已设置（risk_status.circuit_breaker_level=1）")
 
             # 熔断解除
             elif old_level > 0 and new_level == 0:
                 status.trading_paused = False
+                status.trading_paused_for_new = False
                 status.pause_reason = None
                 self._add_risk_log(
                     db, user_id,
@@ -247,13 +313,13 @@ class RiskService:
                 "message": status.pause_reason or "熔断状态更新"
             }))
 
-            # 发送PushPlus通知
+            # 发送PushPlus通知（risk_service方法为同步，使用asyncio.create_task调用异步通知）
             if settings.notification_enabled:
-                notification_service.send_risk_alert(
-                    user_id,
+                asyncio.create_task(notification_service.send_risk_alert(
                     f"熔断警报 - 等级{new_level}",
+                    alert_level,
                     f"今日亏损: {loss_ratio*100:.2f}%\n状态: {status.pause_reason or '正常'}"
-                )
+                ))
 
         return new_level
 
@@ -351,6 +417,14 @@ class RiskService:
         if not status:
             return
 
+        # 更新今日起始资金：以当前账户总权益作为今日起始资金
+        # total_equity 由行情/账户服务更新，若为 0 则保持原值避免除零错误
+        if status.total_equity and status.total_equity > 0:
+            status.today_start_balance = status.total_equity
+        else:
+            # 若总权益未初始化，沿用上一天的起始资金
+            status.today_start_balance = status.today_start_balance or 0.0
+
         status.today_pnl = 0.0
         status.today_trades = 0
         status.today_wins = 0
@@ -358,9 +432,8 @@ class RiskService:
         status.consecutive_losses = 0
         status.circuit_breaker_level = 0
         status.trading_paused = False
+        status.trading_paused_for_new = False
         status.pause_reason = None
-
-        # TODO: 更新今日起始资金
 
         db.commit()
 

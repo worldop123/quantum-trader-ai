@@ -88,6 +88,8 @@ class RiskStatus(Base):
 
     # 是否暂停交易
     trading_paused = Column(Boolean, default=False)
+    # 是否暂停开新仓（二级熔断标记，只允许平仓）
+    trading_paused_for_new = Column(Boolean, default=False)
     # 暂停原因
     pause_reason = Column(String(255), nullable=True)
 

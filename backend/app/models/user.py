@@ -30,3 +30,8 @@ class User(Base):
     risk_settings = relationship("RiskSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
     risk_status = relationship("RiskStatus", back_populates="user", uselist=False, cascade="all, delete-orphan")
     risk_logs = relationship("RiskLog", back_populates="user", cascade="all, delete-orphan")
+
+    # 期权相关关系
+    option_contracts = relationship("OptionContract", back_populates="user")
+    option_positions = relationship("OptionPosition", back_populates="user")
+    option_orders = relationship("OptionOrder", back_populates="user")

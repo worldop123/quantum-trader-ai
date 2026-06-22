@@ -49,10 +49,15 @@
             {{ error }}
           </div>
 
-          <button type="submit" class="w-full quantum-btn-primary" :disabled="loading">
-            <span v-if="loading">登录中...</span>
-            <span v-else>登录</span>
-          </button>
+          <LoadingButton
+            type="primary"
+            size="large"
+            :block="true"
+            :loading="loading"
+            :loading-text="'登录中...'"
+          >
+            登录
+          </LoadingButton>
         </form>
 
         <div class="mt-6 text-center">
@@ -89,6 +94,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import LoadingButton from '../components/common/LoadingButton.vue'
 import { Zap } from 'lucide-vue-next'
 
 const router = useRouter()

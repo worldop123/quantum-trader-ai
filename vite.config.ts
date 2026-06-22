@@ -23,5 +23,9 @@ export default defineConfig({
         ws: true,
       },
     },
+    // 忽略 backend 目录的文件监听，避免 ENOSPC 错误
+    watch: {
+      ignored: ['**/backend/**', '**/node_modules/**'],
+    },
   },
 })

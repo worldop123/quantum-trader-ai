@@ -9,10 +9,44 @@ from app.database import engine, Base, get_db
 from app.models import User
 from app.api import api_router
 from app.websocket import manager
-from app.services import get_password_hash, market_data_service
+from app.services import get_password_hash, market_data_service, strategy_engine
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
+
+
+def _run_lightweight_migrations():
+    """轻量级数据库迁移：为已存在的表添加缺失的列（SQLite兼容）
+
+    Base.metadata.create_all 只能创建新表，无法为已存在的表添加新列。
+    这里通过 ALTER TABLE 补充新增字段，保证旧数据库也能正常使用。
+    """
+    from sqlalchemy import text
+
+    migrations = [
+        # risk_status 表新增 trading_paused_for_new 字段（二级熔断标记）
+        (
+            "risk_status",
+            "trading_paused_for_new",
+            "ALTER TABLE risk_status ADD COLUMN trading_paused_for_new BOOLEAN DEFAULT 0",
+        ),
+    ]
+
+    with engine.connect() as conn:
+        for table, column, sql in migrations:
+            try:
+                conn.execute(text(f"SELECT {column} FROM {table} LIMIT 1"))
+            except Exception:
+                # 列不存在，执行 ALTER TABLE
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                    print(f"✅ 数据库迁移: 已为表 {table} 添加列 {column}")
+                except Exception as e:
+                    print(f"⚠️  数据库迁移失败 ({table}.{column}): {e}")
+
+
+_run_lightweight_migrations()
 
 
 @asynccontextmanager
@@ -57,6 +91,16 @@ async def lifespan(app: FastAPI):
 
     # 启动行情数据推送服务
     await market_data_service.start()
+
+    # 恢复上次运行中的策略（策略持久化恢复）
+    try:
+        restore_db = next(get_db())
+        try:
+            await strategy_engine.restore_running_strategies(restore_db)
+        finally:
+            restore_db.close()
+    except Exception as e:
+        print(f"⚠️  恢复运行中策略时出错: {e}")
 
     yield
     # 关闭时的清理工作

@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-6">
     <!-- Filter Bar -->
-    <div class="quantum-card flex flex-wrap items-center gap-4">
-      <div class="flex gap-2">
+    <div class="quantum-card flex flex-wrap items-center gap-3 md:gap-4">
+      <div class="flex gap-2 overflow-x-auto">
         <button v-for="tab in tabs" :key="tab.value"
           @click="activeTab = tab.value"
-          class="px-4 py-2 rounded text-sm font-medium transition-colors"
+          class="px-4 py-2 rounded text-sm font-medium transition-colors flex-shrink-0 min-h-[44px]"
           :class="activeTab === tab.value ? 'bg-quantum-cyan text-quantum-darker' : 'bg-quantum-border text-gray-400 hover:bg-gray-700'">
           {{ tab.label }}
           <span v-if="tab.count" class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-quantum-cyan/20 text-quantum-cyan">
@@ -14,19 +14,19 @@
         </button>
       </div>
       <div class="flex-1"></div>
-      <select v-model="filterSide" class="quantum-input w-28 text-sm">
+      <select v-model="filterSide" class="quantum-input w-24 md:w-28 text-sm">
         <option value="all">全部方向</option>
         <option value="buy">买入</option>
         <option value="sell">卖出</option>
       </select>
-      <input v-model="searchSymbol" type="text" class="quantum-input w-40 text-sm" placeholder="搜索交易对..." />
-      <button @click="cancelAllPending" class="quantum-btn-danger text-sm" v-if="activeTab === 'pending'">
+      <input v-model="searchSymbol" type="text" class="quantum-input w-32 md:w-40 text-sm" placeholder="搜索交易对..." />
+      <button @click="cancelAllPending" class="quantum-btn-danger text-sm min-h-[44px]" v-if="activeTab === 'pending'">
         全部取消
       </button>
     </div>
 
-    <!-- Orders Table -->
-    <div class="quantum-card overflow-hidden">
+    <!-- Orders Table (PC端) -->
+    <div class="quantum-card overflow-hidden hidden md:block">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-quantum-border text-gray-500 text-left">
@@ -76,8 +76,8 @@
             <td class="py-3 px-4 text-gray-500 text-xs">{{ order.timestamp }}</td>
             <td class="py-3 px-4 text-center">
               <button v-if="order.status === 'pending'" 
-                @click="cancelOrder(order.id)" 
-                class="text-quantum-red hover:text-red-400 text-sm">
+                @click="handleCancelOrder(order.id)" 
+                class="text-quantum-red hover:text-red-400 text-sm min-h-[44px]">
                 取消
               </button>
               <span v-else class="text-gray-600 text-sm">-</span>
@@ -91,6 +91,87 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Orders VirtualList (移动端) -->
+    <div class="block md:hidden">
+      <VirtualList
+        v-if="filteredOrders.length > 0"
+        :items="filteredOrders"
+        :estimated-item-height="180"
+        :buffer-size="3"
+        :get-item-key="(item: any) => item.id"
+        class="orders-virtual-list"
+      >
+        <template #default="{ item }">
+          <div class="quantum-card mb-3">
+            <!-- Card Header -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="font-medium text-gray-200 truncate">{{ item.symbol }}</span>
+                <span :class="item.side === 'buy' ? 'text-quantum-green text-xs' : 'text-quantum-red text-xs'">
+                  {{ item.side === 'buy' ? '买入' : '卖出' }}
+                </span>
+              </div>
+              <span class="px-2 py-1 text-xs rounded flex-shrink-0"
+                :class="{
+                  'bg-quantum-green/20 text-quantum-green': item.status === 'filled',
+                  'bg-quantum-yellow/20 text-quantum-yellow': item.status === 'pending',
+                  'bg-gray-500/20 text-gray-400': item.status === 'cancelled',
+                  'bg-quantum-red/20 text-quantum-red': item.status === 'rejected'
+                }">
+                {{ statusLabels[item.status] }}
+              </span>
+            </div>
+            <!-- Card Body -->
+            <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div>
+                <p class="text-gray-500">订单ID</p>
+                <p class="font-mono text-gray-400">#{{ item.id }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500">类型</p>
+                <p class="text-gray-300">{{ item.type === 'market' ? '市价' : '限价' }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500">价格</p>
+                <p class="font-mono text-gray-300">
+                  {{ item.type === 'market' ? '市价' : '$' + item.price.toLocaleString() }}
+                </p>
+              </div>
+              <div>
+                <p class="text-gray-500">数量</p>
+                <p class="font-mono text-gray-300">{{ item.quantity }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500">已成交</p>
+                <p class="font-mono text-gray-400">{{ item.filledQuantity }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500">时间</p>
+                <p class="text-gray-500 text-xs">{{ item.timestamp }}</p>
+              </div>
+            </div>
+            <!-- Card Footer -->
+            <div v-if="item.status === 'pending'" class="pt-3 border-t border-quantum-border">
+              <button @click="handleCancelOrder(item.id)" 
+                class="w-full text-quantum-red hover:text-red-400 text-sm min-h-[44px] py-2 border border-quantum-red/30 rounded">
+                取消订单
+              </button>
+            </div>
+          </div>
+        </template>
+        <template #empty>
+          <div class="py-12 text-center text-gray-500">
+            <FileText class="w-12 h-12 mx-auto mb-3 text-gray-600" />
+            <p>暂无订单</p>
+          </div>
+        </template>
+      </VirtualList>
+      <div v-else class="quantum-card py-12 text-center text-gray-500">
+        <FileText class="w-12 h-12 mx-auto mb-3 text-gray-600" />
+        <p>暂无订单</p>
+      </div>
     </div>
 
     <!-- Pagination -->
@@ -117,6 +198,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useTradingStore } from '../../stores/trading'
+import VirtualList from '../../components/common/VirtualList.vue'
 import { FileText } from 'lucide-vue-next'
 
 const tradingStore = useTradingStore()
@@ -129,12 +211,12 @@ const pendingCount = computed(() =>
   tradingStore.orders.filter(o => o.status === 'pending').length
 )
 
-const tabs = [
+const tabs = computed(() => [
   { label: '全部', value: 'all', count: null },
   { label: '进行中', value: 'pending', count: pendingCount.value },
   { label: '已成交', value: 'filled', count: null },
   { label: '已取消', value: 'cancelled', count: null }
-]
+])
 
 const statusLabels: Record<string, string> = {
   filled: '已成交',
@@ -152,19 +234,24 @@ const filteredOrders = computed(() => {
   })
 })
 
-function cancelOrder(orderId: number) {
+async function handleCancelOrder(orderId: number) {
   if (confirm('确定要取消此订单吗？')) {
-    tradingStore.cancelOrder(orderId)
+    await tradingStore.cancelOrder(orderId)
   }
 }
 
-function cancelAllPending() {
+async function cancelAllPending() {
   if (confirm('确定要取消所有进行中的订单吗？')) {
-    filteredOrders.value.forEach(o => {
-      if (o.status === 'pending') {
-        tradingStore.cancelOrder(o.id)
-      }
-    })
+    const pendingOrders = filteredOrders.value.filter(o => o.status === 'pending')
+    await Promise.all(pendingOrders.map(o => tradingStore.cancelOrder(o.id)))
   }
 }
 </script>
+
+<style scoped>
+.orders-virtual-list {
+  height: calc(100vh - 280px);
+  min-height: 300px;
+  padding-right: 4px;
+}
+</style>

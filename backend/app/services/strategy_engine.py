@@ -31,6 +31,7 @@ class StrategyRunner:
 
         # 策略配置
         self.strategy_type = ""
+        self.strategy_name = ""
         self.symbol = ""
         self.params: Dict = {}
 
@@ -59,6 +60,7 @@ class StrategyRunner:
             return False
 
         self.strategy_type = strategy.strategy_type
+        self.strategy_name = strategy.name
         self.symbol = strategy.symbol
         self.params = strategy.params or {}
         self.check_interval = self.params.get("check_interval", 60)
@@ -77,10 +79,10 @@ class StrategyRunner:
         self._add_log(db, "info", f"策略启动 - {strategy.name}")
 
         # 发送通知
-        notification_service.send_strategy_notification(
-            self.user_id,
+        await notification_service.send_strategy_notification(
+            self.strategy_name,
             "策略启动",
-            f"策略 {strategy.name} 已启动\n交易对: {self.symbol}"
+            f"策略 {self.strategy_name} 已启动运行"
         )
 
         return True
@@ -1037,6 +1039,7 @@ class StrategyEngine:
                     runner = StrategyRunner(strategy.id, strategy.user_id)
                     # 加载策略配置
                     runner.strategy_type = strategy.strategy_type
+                    runner.strategy_name = strategy.name
                     runner.symbol = strategy.symbol
                     runner.params = strategy.params or {}
                     runner.check_interval = runner.params.get("check_interval", 60)
