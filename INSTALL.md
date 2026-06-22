@@ -28,7 +28,7 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/QuantumTrader-AI/quantum-trader-ai.git
+git clone https://github.com/worldop123/quantum-trader-ai.git
 cd quantum-trader-ai
 ```
 

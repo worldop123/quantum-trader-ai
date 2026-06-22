@@ -4,9 +4,9 @@
 
 **全自动AI量化交易系统，支持多交易所、多策略、AI驱动**
 
-[![GitHub stars](https://img.shields.io/github/stars/QuantumTrader-AI/quantum-trader-ai?style=social)](https://github.com/QuantumTrader-AI/quantum-trader-ai)
-[![GitHub forks](https://img.shields.io/github/forks/QuantumTrader-AI/quantum-trader-ai?style=social)](https://github.com/QuantumTrader-AI/quantum-trader-ai)
-[![License](https://img.shields.io/github/license/QuantumTrader-AI/quantum-trader-ai)](https://github.com/QuantumTrader-AI/quantum-trader-ai/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/worldop123/quantum-trader-ai?style=social)](https://github.com/worldop123/quantum-trader-ai)
+[![GitHub forks](https://img.shields.io/github/forks/worldop123/quantum-trader-ai?style=social)](https://github.com/worldop123/quantum-trader-ai)
+[![License](https://img.shields.io/github/license/worldop123/quantum-trader-ai)](https://github.com/worldop123/quantum-trader-ai/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![Vue](https://img.shields.io/badge/vue-3.x-green.svg)](https://vuejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-teal.svg)](https://fastapi.tiangolo.com/)
