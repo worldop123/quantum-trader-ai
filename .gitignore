@@ -1,73 +1,97 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+env/
+ENV/
 
-# Dependencies
-node_modules
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.cache/
 
-# Build outputs
-dist
-dist-ssr
-build
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
-# Environment variables (sensitive!)
+# Environment
 .env
 .env.local
 .env.*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Testing
-test-results
-midscene_run
-e2e/test-results
-playwright-report
-
-# Python
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info
-dist
-build
-.eggs
-pip-wheel-metadata
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+database/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+.pytest_cache/
+.tox/
+.hypothesis/
+test-results/
+midscene_run/
+e2e/
+test-report.md
+playwright-report/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Misc
+*.bak
+*.tmp
+*.pid
+*.seed
+*.pid.lock
 
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
+# Project specific
+quantum_trader.db
+quantumtrader.db
+backend/app.db
+*.db-journal
+*.db-wal
